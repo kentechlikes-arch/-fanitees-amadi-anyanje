@@ -247,7 +247,7 @@ export const QuickOrderWidget: React.FC<QuickOrderWidgetProps> = ({
 
   // Payment & Checkout State
   const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'mpesa'>('mpesa');
-  const [mpesaPhone, setMpesaPhone] = useState('0793749604');
+  const [mpesaPhone, setMpesaPhone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stkPromptActive, setStkPromptActive] = useState(false);
   const [stkPin, setStkPin] = useState('');
@@ -1354,19 +1354,26 @@ export const QuickOrderWidget: React.FC<QuickOrderWidgetProps> = ({
                 </div>
 
                 {paymentMethod === 'mpesa' && (
-                  <div className="pt-1 space-y-1">
+                  <div className="pt-1 space-y-2">
                     <label className="text-[11px] font-bold text-slate-300 block">
-                      M-Pesa Paying Prompt Number:
+                      Your Safaricom Phone Number (to receive M-Pesa prompt):
                     </label>
                     <input
                       type="tel"
                       value={mpesaPhone}
                       onChange={(e) => setMpesaPhone(e.target.value)}
-                      placeholder="0793749604"
+                      placeholder="07XXXXXXXX or 01XXXXXXXX"
                       className="w-full bg-[#121A2A] border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-emerald-300 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                     />
-                    <div className="text-[10px] text-emerald-400/90 font-mono">
-                      Paying prompt will appear on: <strong className="text-white">{mpesaPhone || '0793749604'}</strong>
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                      <span>Prompt recipient line: <strong className="text-white">{mpesaPhone || 'Your Safaricom line'}</strong></span>
+                      <button
+                        type="button"
+                        onClick={onOpenDeposit}
+                        className="text-emerald-400 hover:text-emerald-300 underline font-sans font-bold"
+                      >
+                        Or pay direct to 0793749604 &rarr;
+                      </button>
                     </div>
                   </div>
                 )}
@@ -1543,9 +1550,9 @@ export const QuickOrderWidget: React.FC<QuickOrderWidgetProps> = ({
               
               <div className="bg-[#05110E] p-3.5 rounded-xl border border-emerald-500/30 text-left font-mono text-xs text-emerald-300 space-y-1">
                 <p>Do you want to pay <strong>Ksh {finalCostInKES.toLocaleString()}</strong> to <strong>KEN TECH LIKES LTD</strong>?</p>
-                <p className="text-[11px] text-slate-400">Account: 522522 (Ref: {activeService.id})</p>
-                <p className="text-[11px] text-emerald-400 font-bold">Paying Phone: {mpesaPhone || '0793749604'}</p>
-                <p className="text-[11px] text-[#FF6A00]">Units: {quantity.toLocaleString()} likes</p>
+                <p className="text-[11px] text-slate-400">Recipient Line: 0793749604 / Till: 522522 (Ref: {activeService.id})</p>
+                <p className="text-[11px] text-emerald-400 font-bold">Prompt Sent to: {mpesaPhone || 'Your Safaricom line'}</p>
+                <p className="text-[11px] text-[#FF6A00]">Units: {quantity.toLocaleString()} {activeService.type || 'units'}</p>
               </div>
 
               <div className="pt-2">

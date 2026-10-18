@@ -100,6 +100,24 @@ export const SupportCenter: React.FC<SupportCenterProps> = ({ orders }) => {
             </div>
           </div>
         </div>
+
+        {/* Official Payment Accounts Banner */}
+        <div className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-teal-950/70 border border-emerald-500/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-white block">Official M-Pesa Deposit & Payment Channels:</span>
+              <span className="text-[11px] text-slate-300">
+                Direct Line: <strong className="text-emerald-400 font-mono text-xs">0793 749 604</strong> &bull; Paybill: <strong className="text-white font-mono">522522</strong> (Acc: <span className="font-mono text-emerald-300">KT-88421</span>)
+              </span>
+            </div>
+          </div>
+          <span className="text-[10px] text-emerald-300 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/30 font-bold whitespace-nowrap">
+            KEN TECH LIKES LTD
+          </span>
+        </div>
       </div>
 
       {/* Submit Ticket Form */}

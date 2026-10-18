@@ -11,17 +11,23 @@ import {
   CheckCircle2, 
   AlertCircle,
   HelpCircle,
-  Lock
+  Lock,
+  PhoneCall,
+  Mail,
+  Send,
+  Sparkles
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Currency } from '../types';
 import { formatCurrency } from '../data/servicesData';
+import { SUPPORT_EMAIL, SUPPORT_PHONE } from '../lib/firebase';
 
 interface DepositModalProps {
   isOpen: boolean;
   onClose: () => void;
   currency: Currency;
   onDepositSuccess: (amountInKES: number, method: string, reference: string) => void;
+  userPhoneNumber?: string;
 }
 
 export const DepositModal: React.FC<DepositModalProps> = ({
@@ -29,22 +35,30 @@ export const DepositModal: React.FC<DepositModalProps> = ({
   onClose,
   currency,
   onDepositSuccess,
+  userPhoneNumber = '',
 }) => {
   if (!isOpen) return null;
 
-  const [activeTab, setActiveTab] = useState<'stk' | 'paybill' | 'crypto' | 'card'>('stk');
+  // Tabs: STK Push, Pay directly to 0793749604, Paybill 522522, Crypto USDT, Card
+  const [activeTab, setActiveTab] = useState<'stk' | 'direct' | 'paybill' | 'crypto' | 'card'>('stk');
   
-  // STK form state
-  const [phoneNumber, setPhoneNumber] = useState('0793749604');
+  // STK form state - Initialized empty or with user's own profile phone, NOT the admin payment line!
+  const [phoneNumber, setPhoneNumber] = useState(userPhoneNumber);
   const [amount, setAmount] = useState<number>(1000);
   const [isProcessing, setIsProcessing] = useState(false);
   const [stkPromptScreen, setStkPromptScreen] = useState(false);
   const [stkPin, setStkPin] = useState('');
-  const [successReceipt, setSuccessReceipt] = useState<{ amount: number; ref: string } | null>(null);
+  const [stkError, setStkError] = useState<string | null>(null);
+  const [successReceipt, setSuccessReceipt] = useState<{ amount: number; ref: string; methodTitle: string } | null>(null);
+
+  // Direct Send Money (0793749604) state
+  const [directAmount, setDirectAmount] = useState<number>(1000);
+  const [directCode, setDirectCode] = useState('');
+  const [directPhoneSender, setDirectPhoneSender] = useState(userPhoneNumber);
+  const [directError, setDirectError] = useState<string | null>(null);
 
   // Paybill verification state
   const [manualCode, setManualCode] = useState('');
-  const [manualCodeSubmitted, setManualCodeSubmitted] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const quickAmounts = [200, 500, 1000, 2500, 5000, 10000];
@@ -57,8 +71,15 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
   const handleInitiateSTK = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phoneNumber || phoneNumber.length < 10) return;
-    if (amount < 50) return;
+    setStkError(null);
+    if (!phoneNumber || phoneNumber.trim().length < 9) {
+      setStkError('Please enter your Safaricom phone number (e.g., 0712345678 or 0112345678).');
+      return;
+    }
+    if (amount < 50) {
+      setStkError('Minimum deposit is KES 50.');
+      return;
+    }
 
     setStkPromptScreen(true);
   };
@@ -69,7 +90,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
       const generatedRef = `QJD${Math.floor(100000 + Math.random() * 900000)}KE`;
       setIsProcessing(false);
       setStkPromptScreen(false);
-      setSuccessReceipt({ amount, ref: generatedRef });
+      setSuccessReceipt({ amount, ref: generatedRef, methodTitle: 'M-PESA STK Push' });
       onDepositSuccess(amount, 'M-PESA STK Push', generatedRef);
 
       try {
@@ -83,17 +104,58 @@ export const DepositModal: React.FC<DepositModalProps> = ({
     }, 1800);
   };
 
+  // Handle direct payment to 0793749604 verification
+  const handleDirectPaymentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setDirectError(null);
+
+    const cleanCode = directCode.trim().toUpperCase();
+    if (!cleanCode || cleanCode.length < 8) {
+      setDirectError('Please enter a valid 10-character M-Pesa SMS confirmation code (e.g., QJD78239KA).');
+      return;
+    }
+
+    if (!directAmount || directAmount < 50) {
+      setDirectError('Please specify the amount you sent (minimum KES 50).');
+      return;
+    }
+
+    setIsProcessing(true);
+    setTimeout(() => {
+      setIsProcessing(false);
+      setSuccessReceipt({ 
+        amount: directAmount, 
+        ref: cleanCode, 
+        methodTitle: 'M-Pesa Direct (0793749604)' 
+      });
+      onDepositSuccess(directAmount, 'M-PESA Direct to 0793749604', cleanCode);
+
+      try {
+        confetti({
+          particleCount: 100,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ['#10B981', '#34D399', '#059669'],
+        });
+      } catch (err) {}
+    }, 1500);
+  };
+
   const handleManualCodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!manualCode.trim() || manualCode.length < 8) return;
+    const cleanCode = manualCode.trim().toUpperCase();
+    if (!cleanCode || cleanCode.length < 8) return;
 
     setIsProcessing(true);
     setTimeout(() => {
       const creditedAmount = 1500; // Simulated verified amount
       setIsProcessing(false);
-      setManualCodeSubmitted(true);
-      setSuccessReceipt({ amount: creditedAmount, ref: manualCode.toUpperCase() });
-      onDepositSuccess(creditedAmount, 'M-PESA Paybill', manualCode.toUpperCase());
+      setSuccessReceipt({ 
+        amount: creditedAmount, 
+        ref: cleanCode, 
+        methodTitle: 'M-PESA Paybill 522522' 
+      });
+      onDepositSuccess(creditedAmount, 'M-PESA Paybill', cleanCode);
 
       try {
         confetti({
@@ -108,7 +170,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
-      <div className="w-full max-w-xl rounded-2xl bg-[#0F172A] border border-slate-800 shadow-2xl overflow-hidden relative animate-in fade-in zoom-in-95 my-8">
+      <div className="w-full max-w-xl rounded-3xl bg-[#0F172A] border border-slate-800 shadow-2xl overflow-hidden relative animate-in fade-in zoom-in-95 my-8">
         
         {/* Modal Top Banner */}
         <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 border-b border-emerald-500/20 p-5 flex items-center justify-between">
@@ -117,11 +179,14 @@ export const DepositModal: React.FC<DepositModalProps> = ({
               <Smartphone className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                Deposit & Top Up Wallet
+              <h3 className="text-base sm:text-lg font-black text-white tracking-tight flex items-center space-x-2">
+                <span>Deposit & Top Up Wallet</span>
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold">
+                  Instant Auto-Credit
+                </span>
               </h3>
               <p className="text-xs text-slate-400">
-                Direct automated Safaricom M-Pesa integration
+                Lipa Na M-Pesa automated integration &bull; 0% Fee
               </p>
             </div>
           </div>
@@ -134,23 +199,39 @@ export const DepositModal: React.FC<DepositModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="grid grid-cols-4 border-b border-slate-800 bg-slate-900/60 text-xs font-bold text-slate-400">
+        {/* Tab Navigation: 5 Payment Methods */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 border-b border-slate-800 bg-slate-900/60 text-xs font-bold text-slate-400">
+          
+          {/* TAB 1: STK Push */}
           <button
             onClick={() => setActiveTab('stk')}
-            className={`py-3 px-2 text-center transition-colors border-b-2 flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-1.5 cursor-pointer ${
+            className={`py-3 px-2 text-center transition-colors border-b-2 flex flex-col items-center justify-center space-y-1 cursor-pointer ${
               activeTab === 'stk'
                 ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10'
                 : 'border-transparent hover:text-slate-200'
             }`}
           >
             <Smartphone className="w-4 h-4 shrink-0" />
-            <span>M-Pesa STK</span>
+            <span>Auto STK Push</span>
           </button>
 
+          {/* TAB 2: Pay Directly to 0793749604 */}
+          <button
+            onClick={() => setActiveTab('direct')}
+            className={`py-3 px-2 text-center transition-colors border-b-2 flex flex-col items-center justify-center space-y-1 cursor-pointer ${
+              activeTab === 'direct'
+                ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10'
+                : 'border-transparent hover:text-slate-200'
+            }`}
+          >
+            <Send className="w-4 h-4 shrink-0" />
+            <span className="truncate">Pay to 0793749604</span>
+          </button>
+
+          {/* TAB 3: Paybill 522522 */}
           <button
             onClick={() => setActiveTab('paybill')}
-            className={`py-3 px-2 text-center transition-colors border-b-2 flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-1.5 cursor-pointer ${
+            className={`py-3 px-2 text-center transition-colors border-b-2 flex flex-col items-center justify-center space-y-1 cursor-pointer ${
               activeTab === 'paybill'
                 ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10'
                 : 'border-transparent hover:text-slate-200'
@@ -160,21 +241,23 @@ export const DepositModal: React.FC<DepositModalProps> = ({
             <span>Paybill 522522</span>
           </button>
 
+          {/* TAB 4: Crypto USDT */}
           <button
             onClick={() => setActiveTab('crypto')}
-            className={`py-3 px-2 text-center transition-colors border-b-2 flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-1.5 cursor-pointer ${
+            className={`py-3 px-2 text-center transition-colors border-b-2 flex flex-col items-center justify-center space-y-1 cursor-pointer ${
               activeTab === 'crypto'
                 ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10'
                 : 'border-transparent hover:text-slate-200'
             }`}
           >
             <Coins className="w-4 h-4 shrink-0" />
-            <span>Crypto USDT</span>
+            <span>USDT Crypto</span>
           </button>
 
+          {/* TAB 5: Card / Bank */}
           <button
             onClick={() => setActiveTab('card')}
-            className={`py-3 px-2 text-center transition-colors border-b-2 flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-1.5 cursor-pointer ${
+            className={`py-3 px-2 text-center transition-colors border-b-2 flex flex-col items-center justify-center space-y-1 cursor-pointer ${
               activeTab === 'card'
                 ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10'
                 : 'border-transparent hover:text-slate-200'
@@ -203,14 +286,18 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                 </p>
               </div>
 
-              <div className="max-w-xs mx-auto bg-slate-900 border border-emerald-500/30 p-3 rounded-xl text-left text-xs font-mono space-y-1">
+              <div className="max-w-xs mx-auto bg-slate-900 border border-emerald-500/30 p-3.5 rounded-2xl text-left text-xs font-mono space-y-1.5 shadow-lg">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Method:</span>
+                  <span className="text-white font-bold">{successReceipt.methodTitle}</span>
+                </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Reference:</span>
                   <span className="text-emerald-400 font-bold">{successReceipt.ref}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Status:</span>
-                  <span className="text-white">Completed</span>
+                  <span className="text-emerald-300 font-bold">Completed &bull; Verified</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Time:</span>
@@ -223,34 +310,59 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                   setSuccessReceipt(null);
                   onClose();
                 }}
-                className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs shadow cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs shadow-lg shadow-emerald-950/40 cursor-pointer"
               >
                 Done & Start Ordering
               </button>
             </div>
           ) : (
             <>
-              {/* TAB 1: M-PESA STK PUSH */}
+              {/* ======================================================== */}
+              {/* TAB 1: M-PESA STK PUSH (AUTOMATED PROMPT)               */}
+              {/* ======================================================== */}
               {activeTab === 'stk' && (
                 <form onSubmit={handleInitiateSTK} className="space-y-4">
-                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-start space-x-2">
+                  <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-start space-x-2.5">
                     <Smartphone className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>
-                      Enter your phone number. Safaricom will send an automated prompt to your phone. Enter your PIN to instantly credit your account.
-                    </span>
+                    <div>
+                      <p className="font-semibold text-white">Automated Safaricom PIN Prompt</p>
+                      <p className="text-[11px] text-slate-300 mt-0.5">
+                        Enter your Safaricom phone number below. You will receive an instant pop-up on your phone asking for your M-Pesa PIN.
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Phone input */}
+                  {/* Direct payment callout */}
+                  <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-300 flex items-center justify-between">
+                    <span>Prefer to send money manually?</span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('direct')}
+                      className="text-emerald-400 hover:text-emerald-300 font-bold underline cursor-pointer ml-2"
+                    >
+                      Make payment to 0793749604 &rarr;
+                    </button>
+                  </div>
+
+                  {stkError && (
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center space-x-2 font-medium">
+                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                      <span>{stkError}</span>
+                    </div>
+                  )}
+
+                  {/* Phone input - Customer's own number, not prefilled with admin line */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-200">
-                      Safaricom Phone Number for M-Pesa Prompt:
-                    </label>
+                    <div className="flex justify-between items-center text-xs font-semibold text-slate-200">
+                      <label>Your Safaricom Phone Number (to receive PIN prompt):</label>
+                      <span className="text-[11px] text-slate-400">e.g. 0712345678</span>
+                    </div>
                     <input
                       type="tel"
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value)}
-                      placeholder="0793749604"
-                      className="w-full bg-[#090D16] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-emerald-300 font-bold font-mono focus:outline-none focus:border-emerald-500"
+                      placeholder="07XXXXXXXX or 01XXXXXXXX"
+                      className="w-full bg-[#090D16] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-emerald-300 font-bold font-mono placeholder-slate-600 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
 
@@ -298,16 +410,129 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                 </form>
               )}
 
-              {/* TAB 2: PAYBILL INSTRUCTIONS */}
+              {/* ======================================================== */}
+              {/* TAB 2: DIRECT PAYMENT TO 0793749604                      */}
+              {/* ======================================================== */}
+              {activeTab === 'direct' && (
+                <div className="space-y-4">
+                  <div className="p-3.5 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-xs text-slate-200 space-y-2">
+                    <div className="flex items-center space-x-2 text-emerald-400 font-bold">
+                      <Send className="w-4 h-4" />
+                      <span>Direct Payment to KEN_TECH LIKES Number:</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300">
+                      Customers can make direct payments directly to our official Safaricom line using <strong>Send Money</strong> or <strong>Pochi la Biashara</strong>.
+                    </p>
+                  </div>
+
+                  {/* Payment Number Card with 1-Click Copy */}
+                  <div className="p-4 rounded-2xl bg-[#090D16] border-2 border-emerald-500/50 shadow-lg space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Official Payment Phone Number
+                        </span>
+                        <span className="text-xl sm:text-2xl font-mono font-black text-emerald-400 tracking-wider">
+                          0793 749 604
+                        </span>
+                        <span className="text-[11px] text-slate-400 block mt-0.5">
+                          Recipient Name: <strong className="text-white">KEN TECH LIKES (Kentech Services)</strong>
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleCopy('0793749604', 'directPhone')}
+                        className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs flex items-center space-x-1.5 cursor-pointer shadow transition-all active:scale-95"
+                      >
+                        {copiedField === 'directPhone' ? (
+                          <>
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copy Number</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Step by Step Guide */}
+                  <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-slate-300 space-y-2">
+                    <p className="font-semibold text-white">How to complete your payment:</p>
+                    <ol className="list-decimal list-inside space-y-1.5 text-slate-400 text-[11px]">
+                      <li>Open M-PESA on your phone and select <strong>Send Money</strong></li>
+                      <li>Enter Phone Number: <strong className="text-white font-mono">0793749604</strong></li>
+                      <li>Enter Amount (e.g. KES 500, KES 1,000, KES 2,500)</li>
+                      <li>Confirm recipient is <strong>KEN TECH LIKES</strong>, enter your PIN and send</li>
+                      <li>Copy the M-PESA transaction code from your SMS (e.g., <span className="font-mono text-emerald-400">QJD82914KA</span>) and enter it below:</li>
+                    </ol>
+                  </div>
+
+                  {/* Verification Form */}
+                  <form onSubmit={handleDirectPaymentSubmit} className="space-y-3 pt-1">
+                    {directError && (
+                      <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center space-x-2 font-medium">
+                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                        <span>{directError}</span>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-200">
+                          Amount Sent (KES):
+                        </label>
+                        <input
+                          type="number"
+                          min={50}
+                          value={directAmount}
+                          onChange={(e) => setDirectAmount(Number(e.target.value))}
+                          className="w-full bg-[#090D16] border border-slate-700 rounded-xl px-3 py-2 text-sm text-white font-mono font-bold focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-200">
+                          M-Pesa SMS Code:
+                        </label>
+                        <input
+                          type="text"
+                          value={directCode}
+                          onChange={(e) => setDirectCode(e.target.value)}
+                          placeholder="e.g. QJD78239KA"
+                          className="w-full bg-[#090D16] border border-slate-700 rounded-xl px-3 py-2 text-sm font-mono text-emerald-300 uppercase font-bold focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isProcessing}
+                      className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-black font-black text-xs sm:text-sm tracking-wide shadow-lg shadow-emerald-950/40 cursor-pointer flex items-center justify-center space-x-2 transition-all active:scale-95"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>{isProcessing ? 'Verifying with Safaricom...' : 'Verify & Credit Wallet Instantly'}</span>
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* TAB 3: PAYBILL 522522                                    */}
+              {/* ======================================================== */}
               {activeTab === 'paybill' && (
                 <div className="space-y-4">
                   <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 space-y-2">
-                    <p className="font-semibold text-white">Manual M-Pesa Lipa na M-Pesa Instructions:</p>
+                    <p className="font-semibold text-white">Manual Lipa na M-Pesa Paybill Instructions:</p>
                     <ol className="list-decimal list-inside space-y-1 text-slate-400 text-[11px]">
                       <li>Go to M-PESA menu on your phone</li>
                       <li>Select <strong>Lipa Na M-PESA &rarr; Pay Bill</strong></li>
-                      <li>Enter Business Number: <strong className="text-white">522522</strong></li>
-                      <li>Enter Account Number: <strong className="text-white">KT-88421</strong></li>
+                      <li>Enter Business Number: <strong className="text-white font-mono">522522</strong></li>
+                      <li>Enter Account Number: <strong className="text-white font-mono">KT-88421</strong></li>
                       <li>Enter your desired Amount & M-PESA PIN</li>
                       <li>Paste the received M-Pesa SMS Code below to auto-verify!</li>
                     </ol>
@@ -321,7 +546,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                       </div>
                       <button
                         onClick={() => handleCopy('522522', 'paybill')}
-                        className="p-1.5 rounded bg-slate-800 text-slate-300 hover:text-white"
+                        className="p-1.5 rounded bg-slate-800 text-slate-300 hover:text-white cursor-pointer"
                       >
                         {copiedField === 'paybill' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
@@ -334,7 +559,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                       </div>
                       <button
                         onClick={() => handleCopy('KT-88421', 'acc')}
-                        className="p-1.5 rounded bg-slate-800 text-slate-300 hover:text-white"
+                        className="p-1.5 rounded bg-slate-800 text-slate-300 hover:text-white cursor-pointer"
                       >
                         {copiedField === 'acc' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
@@ -357,7 +582,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                       <button
                         type="submit"
                         disabled={isProcessing}
-                        className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs cursor-pointer"
+                        className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs cursor-pointer shadow"
                       >
                         {isProcessing ? 'Verifying...' : 'Verify & Credit'}
                       </button>
@@ -366,7 +591,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                 </div>
               )}
 
-              {/* TAB 3: CRYPTO USDT */}
+              {/* ======================================================== */}
+              {/* TAB 4: CRYPTO USDT                                       */}
+              {/* ======================================================== */}
               {activeTab === 'crypto' && (
                 <div className="space-y-4 text-xs text-slate-300">
                   <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
@@ -379,7 +606,7 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                       <span>TKp7A9dZ19W4yJmNxE3vQ8u2kL5sC8F3b</span>
                       <button
                         onClick={() => handleCopy('TKp7A9dZ19W4yJmNxE3vQ8u2kL5sC8F3b', 'usdt')}
-                        className="ml-2 p-1.5 rounded bg-slate-800 text-slate-300 hover:text-white shrink-0"
+                        className="ml-2 p-1.5 rounded bg-slate-800 text-slate-300 hover:text-white shrink-0 cursor-pointer"
                       >
                         {copiedField === 'usdt' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
@@ -392,7 +619,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                 </div>
               )}
 
-              {/* TAB 4: CARD / INTERNATIONAL */}
+              {/* ======================================================== */}
+              {/* TAB 5: CARD / INTERNATIONAL                             */}
+              {/* ======================================================== */}
               {activeTab === 'card' && (
                 <div className="space-y-4 text-xs text-slate-300">
                   <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-2">
@@ -424,9 +653,9 @@ export const DepositModal: React.FC<DepositModalProps> = ({
                     type="button"
                     onClick={() => {
                       onDepositSuccess(2500, 'Card', `CARD-${Math.floor(100000 + Math.random() * 900000)}`);
-                      setSuccessReceipt({ amount: 2500, ref: 'CARD-AUTH-OK' });
+                      setSuccessReceipt({ amount: 2500, ref: 'CARD-AUTH-OK', methodTitle: 'Visa / MasterCard' });
                     }}
-                    className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs"
+                    className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs cursor-pointer"
                   >
                     Simulate Card Deposit (KES 2,500)
                   </button>
@@ -437,23 +666,48 @@ export const DepositModal: React.FC<DepositModalProps> = ({
 
         </div>
 
+        {/* Support Help Footer */}
+        <div className="p-3.5 bg-slate-950/80 border-t border-slate-800 text-[11px] text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <div className="flex items-center space-x-1.5">
+            <HelpCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span>Need payment assistance?</span>
+          </div>
+          <div className="flex items-center space-x-3 text-slate-300">
+            <a 
+              href="https://wa.me/254793749604" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-emerald-400 hover:underline font-mono"
+            >
+              WhatsApp: +254 793 749 604
+            </a>
+            <span>&bull;</span>
+            <a 
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className="text-slate-300 hover:text-emerald-400 font-mono"
+            >
+              {SUPPORT_EMAIL}
+            </a>
+          </div>
+        </div>
+
       </div>
 
       {/* STK Push Simulator Prompt Modal */}
       {stkPromptScreen && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-slate-900 border border-emerald-500/50 p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+          <div className="w-full max-w-sm rounded-3xl bg-slate-900 border border-emerald-500/50 p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between pb-2 border-b border-slate-800">
               <span className="text-xs font-bold text-emerald-400 tracking-wider">
                 M-PESA SIM PROMPT
               </span>
-              <button onClick={() => setStkPromptScreen(false)} className="text-slate-400 text-xs">✕</button>
+              <button onClick={() => setStkPromptScreen(false)} className="text-slate-400 text-xs cursor-pointer">✕</button>
             </div>
 
             <div className="bg-[#05110E] p-3.5 rounded-xl border border-emerald-500/30 text-xs text-emerald-300 font-mono space-y-1">
               <p>Pay <strong>Ksh {amount.toLocaleString()}</strong> to <strong>KEN TECH LIKES LTD</strong>?</p>
-              <p className="text-[11px] text-slate-400">Till/Paybill: 522522</p>
-              <p className="text-[11px] text-emerald-400 font-bold">Paying Line: {phoneNumber || '0793749604'}</p>
+              <p className="text-[11px] text-slate-400">Recipient Line: 0793749604 / Till: 522522</p>
+              <p className="text-[11px] text-emerald-400 font-bold">Prompt Sent to: {phoneNumber || 'Your Phone Number'}</p>
             </div>
 
             <div className="text-center">

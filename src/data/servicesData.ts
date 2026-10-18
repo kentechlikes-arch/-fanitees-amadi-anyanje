@@ -2562,7 +2562,7 @@ export const FAQS = [
   },
   {
     q: 'How does M-Pesa payment work on KEN_TECH LIKES?',
-    a: 'You can pay instantly with M-Pesa in two simple ways: 1) Automatic STK Push: Enter your phone number, click "Pay", and a prompt automatically pops up on your Safaricom phone asking for your M-Pesa PIN. 2) Manual Paybill: Send money to Paybill 522522 with your account ID and your funds reflect immediately.',
+    a: 'You can pay instantly with M-Pesa in three easy ways: 1) Automatic STK Push: Enter your phone number, click "Pay", and a prompt automatically pops up on your Safaricom phone asking for your M-Pesa PIN. 2) Direct Send Money: Send payment directly to our Safaricom line 0793749604 (KEN TECH LIKES LTD) and enter the SMS code for instant credit. 3) Manual Paybill: Send money to Paybill 522522 (Account: KT-88421).',
   },
   {
     q: 'How fast do orders start and deliver?',

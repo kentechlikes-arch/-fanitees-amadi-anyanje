@@ -622,6 +622,7 @@ export default function App() {
         onClose={() => setIsDepositOpen(false)}
         currency={currency}
         onDepositSuccess={handleDepositSuccess}
+        userPhoneNumber={userProfile?.phoneNumber}
       />
 
       {/* User Authentication & Password Reset Modal */}
