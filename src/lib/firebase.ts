@@ -89,12 +89,20 @@ export async function validateFirebaseConnection(): Promise<boolean> {
 // Firebase Authentication Methods
 // ==========================================
 
+import { isReservedUsername } from './termsPolicy';
+
 export async function registerAccount(
   email: string,
   pass: string,
   fullName: string,
   phoneNumber?: string
 ): Promise<{ user: FirebaseUser; profile: UserProfile }> {
+  // Check reserved usernames prior to account provisioning
+  const reservedCheck = isReservedUsername(fullName.trim() || email.split('@')[0], DESIGNATED_ADMIN_UID);
+  if (reservedCheck.isReserved) {
+    throw new Error(reservedCheck.reason || 'This name contains a protected system reserved term.');
+  }
+
   const cred = await createUserWithEmailAndPassword(auth, email.trim(), pass);
   const user = cred.user;
 

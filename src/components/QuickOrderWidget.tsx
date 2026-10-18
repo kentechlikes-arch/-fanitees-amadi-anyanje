@@ -25,6 +25,7 @@ import confetti from 'canvas-confetti';
 import { Currency, PlatformId, ServiceItem, OrderRecord } from '../types';
 import { SERVICES_CATALOG, PLATFORMS_CONFIG, formatCurrency, FACEBOOK_SUBTITLES, TIKTOK_SUBTITLES, INSTAGRAM_SUBTITLES, YOUTUBE_SUBTITLES, TELEGRAM_SUBTITLES } from '../data/servicesData';
 import { SocialBrandIcon } from './SocialBrandIcons';
+import { validateTargetLink } from '../lib/termsPolicy';
 
 interface QuickOrderWidgetProps {
   selectedCategory: PlatformId;
@@ -36,6 +37,7 @@ interface QuickOrderWidgetProps {
   preselectedServiceId?: string;
   onViewOrder: (orderId: string) => void;
   services?: ServiceItem[];
+  onOpenTerms?: () => void;
 }
 
 export const QuickOrderWidget: React.FC<QuickOrderWidgetProps> = ({
@@ -48,6 +50,7 @@ export const QuickOrderWidget: React.FC<QuickOrderWidgetProps> = ({
   preselectedServiceId,
   onViewOrder,
   services,
+  onOpenTerms,
 }) => {
   const catalog = services || SERVICES_CATALOG;
   // Service selection
@@ -586,6 +589,12 @@ export const QuickOrderWidget: React.FC<QuickOrderWidgetProps> = ({
 
     if (!targetLink.trim()) {
       setErrorMsg('Please paste your target link (e.g. post, profile, or video link).');
+      return;
+    }
+
+    const linkCheck = validateTargetLink(targetLink);
+    if (!linkCheck.isValid) {
+      setErrorMsg(linkCheck.error || 'The entered target link violates prohibited content guidelines.');
       return;
     }
 
@@ -1263,6 +1272,21 @@ export const QuickOrderWidget: React.FC<QuickOrderWidgetProps> = ({
                     placeholder={activeService.linkPlaceholder || 'https://www.facebook.com/...'}
                     className="w-full bg-[#121A2A] border border-slate-700/80 focus:border-[#FF6A00] rounded-2xl px-4 py-3.5 text-sm text-white font-mono placeholder-slate-500 focus:outline-none transition-colors"
                   />
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1.5 px-1">
+                    <span className="flex items-center space-x-1">
+                      <ShieldCheck className="w-3 h-3 text-emerald-400 shrink-0" />
+                      <span>Filtered for compliance (No adult, scam, or illicit links)</span>
+                    </span>
+                    {onOpenTerms && (
+                      <button
+                        type="button"
+                        onClick={onOpenTerms}
+                        className="text-emerald-400 hover:text-emerald-300 underline font-semibold cursor-pointer shrink-0 ml-2"
+                      >
+                        Prohibited terms
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 

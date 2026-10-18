@@ -17,7 +17,9 @@ import {
   LogIn,
   LogOut,
   KeyRound,
-  UserPlus
+  UserPlus,
+  FileText,
+  Scale
 } from 'lucide-react';
 import { Currency, ThemePreset, UserProfile } from '../types';
 import { formatCurrency } from '../data/servicesData';
@@ -39,6 +41,7 @@ interface NavbarProps {
   onOpenAuth: (mode?: 'login' | 'register' | 'reset-password') => void;
   onLogout: () => void;
   isAdmin?: boolean;
+  onOpenTerms?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -56,6 +59,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAuth,
   onLogout,
   isAdmin = false,
+  onOpenTerms,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
@@ -375,6 +379,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <span>Reset Password</span>
                     </button>
 
+                    {onOpenTerms && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onOpenTerms();
+                          setUserDropdownOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-xs text-slate-300 hover:text-white hover:bg-slate-800/60 flex items-center space-x-2.5 transition-colors cursor-pointer"
+                      >
+                        <FileText className="w-4 h-4 text-emerald-400" />
+                        <span>Terms & Prohibited Rules</span>
+                      </button>
+                    )}
+
                     <div className="border-t border-slate-800/80 my-1"></div>
 
                     <button
@@ -546,6 +564,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               Lipa Na M-Pesa STK
             </button>
           </div>
+
+          {onOpenTerms && (
+            <button
+              onClick={() => {
+                onOpenTerms();
+                setMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center space-x-2 px-3 py-2 text-xs text-slate-400 hover:text-white transition-colors cursor-pointer border-t border-slate-800/60"
+            >
+              <Scale className="w-4 h-4 text-emerald-400" />
+              <span>Platform Terms & Prohibited Rules</span>
+            </button>
+          )}
 
           <div className="pt-2 flex justify-center">
             <DownloadAppButton />

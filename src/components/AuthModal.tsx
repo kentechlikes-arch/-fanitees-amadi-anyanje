@@ -20,6 +20,7 @@ import {
   resetPassword, 
   getAuthErrorMessage 
 } from '../lib/firebase';
+import { isReservedUsername } from '../lib/termsPolicy';
 
 export type AuthMode = 'login' | 'register' | 'reset-password';
 
@@ -28,13 +29,15 @@ interface AuthModalProps {
   onClose: () => void;
   initialMode?: AuthMode;
   onSuccess?: () => void;
+  onOpenTerms?: () => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   initialMode = 'login',
-  onSuccess
+  onSuccess,
+  onOpenTerms
 }) => {
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [fullName, setFullName] = useState('');
@@ -89,6 +92,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     } else if (mode === 'register') {
       if (!fullName.trim()) {
         setErrorMsg('Please enter your full name or nickname.');
+        return;
+      }
+      const reservedCheck = isReservedUsername(fullName.trim());
+      if (reservedCheck.isReserved) {
+        setErrorMsg(reservedCheck.reason || 'This username is reserved by the system. Please choose another username.');
+        return;
+      }
+      const emailPrefixCheck = isReservedUsername(email.split('@')[0]);
+      if (emailPrefixCheck.isReserved) {
+        setErrorMsg(emailPrefixCheck.reason || 'This email username contains a reserved system term.');
         return;
       }
       if (!password || password.length < 6) {
@@ -324,9 +337,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {/* Bonus callout on Register */}
           {mode === 'register' && (
-            <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/20 text-emerald-300 text-xs flex items-center space-x-2">
-              <Sparkles className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <span>Includes <strong>50 KES</strong> instant signup bonus into your wallet!</span>
+            <div className="space-y-2">
+              <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/20 text-emerald-300 text-xs flex items-center space-x-2">
+                <Sparkles className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <span>Includes <strong>50 KES</strong> instant signup bonus into your wallet!</span>
+              </div>
+              <p className="text-[11px] text-slate-400 text-center leading-normal">
+                By registering, you agree to KEN_TECH LIKES{' '}
+                <button
+                  type="button"
+                  onClick={onOpenTerms}
+                  className="text-emerald-400 underline hover:text-emerald-300 font-semibold cursor-pointer"
+                >
+                  Platform Terms & Reserved Names Policy
+                </button>
+              </p>
             </div>
           )}
 

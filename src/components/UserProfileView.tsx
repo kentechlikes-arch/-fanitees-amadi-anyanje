@@ -40,6 +40,7 @@ interface UserProfileViewProps {
   onLogout: () => void;
   onNavigateToAdmin?: () => void;
   isAdmin?: boolean;
+  onOpenTerms?: () => void;
 }
 
 export const UserProfileView: React.FC<UserProfileViewProps> = ({
@@ -54,6 +55,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   onLogout,
   onNavigateToAdmin,
   isAdmin = false,
+  onOpenTerms,
 }) => {
   const [copiedKey, setCopiedKey] = useState(false);
   const [resettingPassword, setResettingPassword] = useState(false);
@@ -417,6 +419,31 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
             );
           })}
         </div>
+      </div>
+
+      {/* Account Safety & Terms Compliance Card */}
+      <div className="rounded-3xl bg-[#090E1A] border border-slate-800 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center space-x-3.5">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white">Platform Compliance & Prohibited Terms</h4>
+            <p className="text-xs text-slate-400">
+              Zero tolerance for adult/scam links, reserved username impersonation, and fraudulent M-Pesa reversals.
+            </p>
+          </div>
+        </div>
+
+        {onOpenTerms && (
+          <button
+            type="button"
+            onClick={onOpenTerms}
+            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all cursor-pointer whitespace-nowrap"
+          >
+            Review Prohibited Terms &rarr;
+          </button>
+        )}
       </div>
 
     </div>

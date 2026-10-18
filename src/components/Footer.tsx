@@ -3,9 +3,10 @@ import { Sparkles, ShieldCheck, Heart, Award } from 'lucide-react';
 
 interface FooterProps {
   onNavigate: (tab: string) => void;
+  onOpenTerms?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
+export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenTerms }) => {
   return (
     <footer className="mt-20 border-t border-slate-800/80 bg-[#080C14] text-slate-400 text-xs">
       {/* Payment methods banner */}
@@ -84,6 +85,16 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <li><button onClick={() => onNavigate('profile')} className="hover:text-emerald-400 cursor-pointer">Profile & Wallet</button></li>
               <li><button onClick={() => onNavigate('api')} className="hover:text-emerald-400 cursor-pointer">API Documentation</button></li>
               <li><button onClick={() => onNavigate('support')} className="hover:text-emerald-400 cursor-pointer">24/7 Support Desk</button></li>
+              {onOpenTerms && (
+                <li>
+                  <button 
+                    onClick={onOpenTerms} 
+                    className="text-emerald-400/90 hover:text-emerald-300 font-semibold cursor-pointer underline flex items-center space-x-1"
+                  >
+                    <span>Terms & Prohibited Terms</span>
+                  </button>
+                </li>
+              )}
             </ul>
           </div>
 
@@ -106,8 +117,16 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
 
         {/* Bottom copyright */}
         <div className="mt-10 pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-3">
-          <div>
-            &copy; {new Date().getFullYear()} KEN_TECH LIKES. All rights reserved. Similar architecture & superior speed to dukalalikes.com.
+          <div className="flex flex-wrap items-center gap-2">
+            <span>&copy; {new Date().getFullYear()} KEN_TECH LIKES. All rights reserved.</span>
+            {onOpenTerms && (
+              <>
+                <span>&bull;</span>
+                <button onClick={onOpenTerms} className="hover:text-emerald-400 underline cursor-pointer">
+                  Platform Terms & Prohibited Guidelines
+                </button>
+              </>
+            )}
           </div>
           <div className="flex items-center space-x-1">
             <span>Engineered with excellence for Africa's digital creators</span>

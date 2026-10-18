@@ -35,6 +35,7 @@ import { ArrowLeft, Sparkles, Table as TableIcon, Lock } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
 import { AuthModal, AuthMode } from './components/AuthModal';
 import { AdminPanel } from './components/AdminPanel';
+import { TermsAndPolicyModal } from './components/TermsAndPolicyModal';
 
 import {
   ensureAuthSession,
@@ -63,6 +64,7 @@ export default function App() {
   const [currency, setCurrency] = useState<Currency>('KES');
   const [theme, setTheme] = useState<ThemePreset>('emerald-obsidian');
   const [isDepositOpen, setIsDepositOpen] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
   const [showCatalogInOrderTab, setShowCatalogInOrderTab] = useState(false);
 
   // Authentication State
@@ -396,6 +398,7 @@ export default function App() {
         onOpenAuth={handleOpenAuth}
         onLogout={handleLogout}
         isAdmin={isAdmin}
+        onOpenTerms={() => setIsTermsOpen(true)}
       />
 
       {/* Hero Banner (Featured on New order view) */}
@@ -479,6 +482,7 @@ export default function App() {
                   preselectedServiceId={preselectedServiceId}
                   onViewOrder={handleViewOrder}
                   services={services}
+                  onOpenTerms={() => setIsTermsOpen(true)}
                 />
                 {/* Reviews, Credibility & FAQ right below order widget */}
                 <ReviewsAndFaq />
@@ -534,6 +538,7 @@ export default function App() {
             onLogout={handleLogout}
             onNavigateToAdmin={() => setActiveTab('admin')}
             isAdmin={isAdmin}
+            onOpenTerms={() => setIsTermsOpen(true)}
           />
         )}
 
@@ -630,13 +635,23 @@ export default function App() {
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
         initialMode={authMode}
+        onOpenTerms={() => setIsTermsOpen(true)}
       />
 
       {/* Floating 24/7 WhatsApp Support Widget */}
       <WhatsAppSupportWidget />
 
+      {/* Terms of Service & Prohibited Guidelines Modal */}
+      <TermsAndPolicyModal
+        isOpen={isTermsOpen}
+        onClose={() => setIsTermsOpen(false)}
+      />
+
       {/* Global Footer */}
-      <Footer onNavigate={setActiveTab} />
+      <Footer 
+        onNavigate={setActiveTab} 
+        onOpenTerms={() => setIsTermsOpen(true)}
+      />
 
     </div>
   );

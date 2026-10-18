@@ -35,6 +35,7 @@ import {
 } from '../types';
 import { formatCurrency, PLATFORMS_CONFIG } from '../data/servicesData';
 import { DESIGNATED_ADMIN_UID } from '../lib/firebase';
+import { RESERVED_USERNAMES, PROHIBITED_KEYWORDS } from '../lib/termsPolicy';
 
 interface AdminPanelProps {
   orders: OrderRecord[];
@@ -901,6 +902,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               <p className="text-xs text-slate-300 font-mono">
                 Helpline: <span className="text-emerald-400">+254 793 749 604</span>
               </p>
+            </div>
+
+            {/* Platform Policy & Prohibited Terms Status */}
+            <div className="p-4 rounded-2xl bg-[#121A2A] border border-slate-700/80 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white">Active Reserved & Prohibited Terms</span>
+                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  Enforced
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300">
+                System automatically scans all checkout target links and blocks registrations attempting to impersonate administration.
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                  <span className="text-slate-400 block text-[10px]">Reserved Usernames</span>
+                  <span className="font-mono font-bold text-amber-400">{RESERVED_USERNAMES.length} Protected Names</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                  <span className="text-slate-400 block text-[10px]">Prohibited Link Keywords</span>
+                  <span className="font-mono font-bold text-rose-400">{PROHIBITED_KEYWORDS.length} Blocked Terms</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
